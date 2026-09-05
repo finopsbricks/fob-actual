@@ -33,4 +33,10 @@ All notable changes to this project are documented here. Format follows
 - Money helpers `formatAmount` / `parseAmount` for Actual's integer minor units, with
   decimal-string scaling so `1.005` does not lose a cent to float error.
 
+- **Phase 5 — polish and packaging.** `files` allow-list verified with `npm pack --dry-run` (84
+  files, no `.claude`/`.env`/`docs`/`tests`), `CLAUDE.md`, and `docs/usage/` (installation,
+  configuration, authentication, commands).
+- Engine lifecycle tests covering `hold()` session reuse, sync-on-write, always-close, and the
+  error-code mapping.
+
 [Unreleased]: https://github.com/finopsbricks/fob-actual

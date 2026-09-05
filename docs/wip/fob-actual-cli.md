@@ -1,6 +1,10 @@
 # fob-actual — Actual Budget CLI + Client (2-in-1)
 
-## Status: PROPOSED (0% — research complete + **live-verified**, no code written)
+## Status: IMPLEMENTED (Phases 0-5 complete)
+
+All five phases are built, live-verified against both budgets, and committed. 90 tests passing,
+typecheck clean, tarball verified. What follows is the original design doc, kept as the research
+trail; see "Implementation notes" at the end for what changed during the build.
 
 Research done against the live server (`https://budget.echoalex.com`, sync-server **26.8.1**) and
 the vendored upstream source at `finopsbricks/actual/`. **Connectivity is proven end-to-end**: both
@@ -291,3 +295,55 @@ Phase 1 cannot start until the token blocker is cleared.
 - `finopsbricks/cli/fob-zb` — closest structural sibling (external SaaS, 2-in-1, profiles)
 - `finopsbricks/actual/packages/api` — the engine we wrap
 - `finopsbricks/actual/packages/cli` — upstream CLI, prior art only
+
+---
+
+## Implementation notes (2026-09-06)
+
+Everything in the plan above shipped. Five things were learned only by building it:
+
+1. **The engine allows one open budget per process.** A handler making several client calls (list
+   accounts, then a balance each) failed with `No budget file is open` — the first call closed the
+   budget on its way out. Added `hold()` on the engine and client: nested `withSession` calls share
+   the open session, and it syncs once at the end if any nested call wrote. This is now the rule for
+   any caller making more than one call, library users included.
+
+2. **The engine writes progress chatter to stdout**, which would corrupt `--json` and any pipe.
+   `muffle()` redirects it to stderr — but only around lifecycle calls, never around a handler body,
+   since a handler's `console.log` *is* the command's data. An early version wrapped too much and
+   swallowed the output.
+
+3. **`getCategories({hidden: true})` is a filter, not an include-flag** — it returns *only* hidden
+   rows. Id→name lookups silently resolved nothing until this was found. Added `listAll()`.
+
+4. **`parseAmount` cannot use `n * 100`.** `1.005 * 100` is `100.49999…` in binary floating point,
+   so `Math.round` drops a cent. It now scales via the decimal string. Caught by a test written
+   against the intended behaviour rather than the implementation.
+
+5. **`aqlQuery` calls `query.serialize()`**, so a serialized state object is rejected; `query run`
+   rebuilds a real `Query` through the exported `q()` builder.
+
+Two smaller deviations from the plan:
+
+- **Account names are accepted anywhere an id is**, with ambiguity refused rather than guessed
+  (`src/cli/accounts/_resolve.js`). Nobody remembers a uuid, and every transaction command needs an
+  account.
+- **`transactions import --dry-run` uses the engine's own preview mode** rather than simulating one,
+  so it reports real dedupe decisions.
+
+### Open questions, settled
+
+- **Data-dir footprint** (Q4): each profile caches its budget under
+  `~/.fob/fob-actual/data/<profile>/`, overridable per profile or with `FOB_ACTUAL_DATA_DIR`.
+  Documented in `docs/usage/installation.md` as a cache that can be deleted freely.
+- **Write safety** (Q5): `--dry-run` on every write, `--yes` on every destructive action. Verified
+  live — a create/delete round-trip on the shared FOB Budget synced correctly and was cleaned up.
+- **Token acquisition UX** (Q6): shipped the guided browser-retrieval flow. Loopback OAuth remains
+  possible later, but needs the provider's redirect URI reconfigured, so it stays deferred.
+
+### Still open
+
+- **Worker runtime on Node ≥ 22.** Confirmed locally (v22.21.0), *not* yet confirmed on the worker
+  fleet. This is the one thing that would block importing the client there.
+- **Loopback `auth login`** for OpenID, as above.
+- **Bank sync** (`runBankSync`) is exposed by the engine but not surfaced as a command yet.
