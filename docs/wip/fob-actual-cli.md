@@ -323,6 +323,11 @@ Everything in the plan above shipped. Five things were learned only by building 
 5. **`aqlQuery` calls `query.serialize()`**, so a serialized state object is rejected; `query run`
    rebuilds a real `Query` through the exported `q()` builder.
 
+6. **`getBudgets()` returns a downloaded budget twice** — the local cached copy (`id` set,
+   `state: null`) and the server's entry (`state: 'remote'`). They are one budget; `budgets.list()`
+   merges them on `cloudFileId` and reports `state: local|remote`, which is more useful than the
+   raw duplicate. Only visible after a budget has been downloaded, so it surfaced late.
+
 Two smaller deviations from the plan:
 
 - **Account names are accepted anywhere an id is**, with ambiguity refused rather than guessed

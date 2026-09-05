@@ -10,6 +10,7 @@ const COLUMNS = {
   sync_id:   { header: 'SYNC ID',   align: 'left',  render: (b) => b.groupId ?? '',                 raw: (b) => b.groupId },
   name:      { header: 'NAME',      align: 'left',  render: (b) => b.name ?? '',                    raw: (b) => b.name },
   file_id:   { header: 'FILE ID',   align: 'left',  render: (b) => b.cloudFileId ?? '',             raw: (b) => b.cloudFileId },
+  // 'local' = a copy is cached on this machine; 'remote' = server-only so far.
   state:     { header: 'STATE',     align: 'left',  render: (b) => b.state ?? '',                   raw: (b) => b.state },
   encrypted: { header: 'ENCRYPTED', align: 'left',  render: (b) => (b.encryptKeyId ? 'yes' : 'no'), raw: (b) => Boolean(b.encryptKeyId) },
   users:     { header: 'USERS',     align: 'right', render: (b) => String(b.usersWithAccess?.length ?? ''), raw: (b) => b.usersWithAccess?.length },

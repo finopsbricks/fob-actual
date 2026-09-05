@@ -24,13 +24,30 @@
  * @property {(month: string) => Promise<void>} resetHold
  */
 
+/**
+ * `getBudgets()` returns a budget **twice** once it has been downloaded: the
+ * local copy (`id` set, `state` null) and the server's entry (`state: 'remote'`).
+ * They are the same budget, so merge them on `cloudFileId` — keeping the local
+ * `id` and reporting `state: 'local'` for one that is cached on this machine.
+ * @param {any[]} budgets
+ */
+function dedupe(budgets) {
+  const merged = new Map();
+  for (const b of budgets) {
+    const key = b.cloudFileId ?? b.groupId ?? b.id;
+    const existing = merged.get(key);
+    merged.set(key, existing ? { ...existing, ...b, id: existing.id ?? b.id } : { ...b });
+  }
+  return [...merged.values()].map((b) => ({ ...b, state: b.id ? 'local' : (b.state ?? 'remote') }));
+}
+
 /** @param {ReturnType<typeof import('./_base.js').createContext>} ctx @returns {BudgetsApi} */
 export function buildBudgets(ctx) {
   return {
-    list: () => ctx.server((api) => api.getBudgets()),
+    list: async () => dedupe(await ctx.server((api) => api.getBudgets())),
 
     get: async (idOrName) => {
-      const budgets = await ctx.server((api) => api.getBudgets());
+      const budgets = dedupe(await ctx.server((api) => api.getBudgets()));
       return (
         budgets.find((b) => b.groupId === idOrName || b.cloudFileId === idOrName || b.name === idOrName) ?? null
       );

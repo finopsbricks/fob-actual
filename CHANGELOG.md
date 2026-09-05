@@ -36,6 +36,15 @@ All notable changes to this project are documented here. Format follows
 - **Phase 5 — polish and packaging.** `files` allow-list verified with `npm pack --dry-run` (84
   files, no `.claude`/`.env`/`docs`/`tests`), `CLAUDE.md`, and `docs/usage/` (installation,
   configuration, authentication, commands).
+
+### Fixed
+
+- `budgets list` showed a downloaded budget twice — `getBudgets()` returns both the local copy and
+  the server's entry for it. They are merged on `cloudFileId`, and `STATE` now reports `local` vs
+  `remote` usefully.
+
+### Added (cont.)
+
 - Engine lifecycle tests covering `hold()` session reuse, sync-on-write, always-close, and the
   error-code mapping.
 
