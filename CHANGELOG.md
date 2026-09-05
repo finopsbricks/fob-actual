@@ -24,6 +24,10 @@ All notable changes to this project are documented here. Format follows
   id is), `transactions` (list/add/import/edit/delete, resolving payee + category ids to names for
   the table while `--json` keeps the raw ids), `categories`, `category-groups`, and `payees`
   (including `merge`).
+- **Phases 3-4 — automation and the query escape hatch.** `rules` and `schedules` (JSON-bodied
+  create/edit, since both carry nested structures — the same shape their `show --json` emits),
+  `tags`, and `query run` for ActualQL with `--table`/`--filter`/`--select`/`--order-by`, or a
+  whole serialized query via `--query`/`--file`.
 - `hold()` on the client and engine: several calls share one open budget. The engine permits one
   session per process, so an unheld second call failed with "No budget file is open".
 - Money helpers `formatAmount` / `parseAmount` for Actual's integer minor units, with
