@@ -19,6 +19,13 @@ All notable changes to this project are documented here. Format follows
   list|current|add|use|remove|refresh` with server-resolved budget identity caching, and
   `budgets list|show|sync|months|month|set-amount|carryover|hold|reset-hold`.
 - `server info` reporting the sync server's version.
+- **Phase 2 — read + write surface for the core resources.** `accounts`
+  (list/show/balance/create/edit/close/reopen/delete, with account **names** accepted anywhere an
+  id is), `transactions` (list/add/import/edit/delete, resolving payee + category ids to names for
+  the table while `--json` keeps the raw ids), `categories`, `category-groups`, and `payees`
+  (including `merge`).
+- `hold()` on the client and engine: several calls share one open budget. The engine permits one
+  session per process, so an unheld second call failed with "No budget file is open".
 - Money helpers `formatAmount` / `parseAmount` for Actual's integer minor units, with
   decimal-string scaling so `1.005` does not lose a cent to float error.
 

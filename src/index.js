@@ -16,10 +16,18 @@
  * Unlike the HTTP wrappers in this family, the transport is a **stateful engine
  * session**: Actual exposes no callable REST API, so `@actual-app/api` downloads
  * the budget to a local SQLite copy, answers queries from it, and syncs CRDT
- * messages back. Each call opens and closes a session (see src/engine.js), so the
- * client is safe to hold across calls but is not concurrent — the engine allows
- * one session per process. Multi-budget workers construct one client per budget:
- * `fobActual(budgetACreds)`, `fobActual(budgetBCreds)`, used in sequence.
+ * messages back. Each call opens and closes a session (see src/engine.js), which
+ * costs a sync and a SQLite open — so **wrap several calls in `hold()`**:
+ *
+ *   await actual.hold(async () => {
+ *     const accounts = await actual.accounts.list();
+ *     return actual.accounts.balance(accounts[0].id);
+ *   });
+ *
+ * Without it the second call fails ("No budget file is open"), because the first
+ * closed the budget on its way out. The engine permits one session per process,
+ * so a client is not concurrent; multi-budget workers construct one client per
+ * budget — `fobActual(budgetACreds)`, `fobActual(budgetBCreds)` — used in sequence.
  *
  * @typedef {import('./resources/accounts.js').AccountsApi} AccountsApi
  * @typedef {import('./resources/transactions.js').TransactionsApi} TransactionsApi
@@ -59,6 +67,7 @@ import { buildQuery } from './resources/query.js';
  * @property {SchedulesApi} schedules
  * @property {TagsApi} tags
  * @property {QueryApi} query
+ * @property {<T>(fn: () => Promise<T>) => Promise<T>} hold
  * @property {() => Promise<string>} serverVersion
  */
 
@@ -82,6 +91,13 @@ export function fobActual(credentials) {
     schedules: buildSchedules(ctx),
     tags: buildTags(ctx),
     query: buildQuery(ctx),
+    /**
+     * Run several calls against one open budget:
+     *   await actual.hold(async () => { ...many calls... });
+     * Required whenever a caller makes more than one call — the engine permits
+     * one open session per process, so unheld calls would each open and close.
+     */
+    hold: (fn) => ctx.hold(fn),
     /** The sync server's version string. */
     serverVersion: () => ctx.server((api) => api.getServerVersion()),
   };

@@ -14,7 +14,7 @@
  * @typedef {import('../engine.js').ActualError} ActualError
  */
 
-import { withSession } from '../engine.js';
+import { withSession, hold } from '../engine.js';
 
 /**
  * Build the resource context handed to every `buildX(ctx)`.
@@ -39,6 +39,13 @@ export function createContext(credentials) {
      * @template T @param {(api: any) => Promise<T>} fn @returns {Promise<T>}
      */
     server: (fn) => withSession(credentials, fn, { budget: false }),
+    /**
+     * Keep one session open across several calls. Without this, each call opens
+     * and closes its own session and the second fails — the engine allows one
+     * open budget per process.
+     * @template T @param {() => Promise<T>} fn @returns {Promise<T>}
+     */
+    hold: (fn) => hold(credentials, fn),
   };
 }
 

@@ -114,7 +114,15 @@ async function muffle(fn) {
   }
 }
 
-/** The open session, or null. The engine allows only one per process. */
+/**
+ * The open session, or null. The engine allows only one per process, so a
+ * session is shared by every call made while it is open.
+ *
+ * `depth` refcounts nested/held users: the outermost holder closes the session,
+ * so a handler making several client calls (list accounts, then a balance each)
+ * runs them all against one open budget instead of reopening — and closing —
+ * between calls.
+ */
 let current = null;
 
 /**
@@ -131,8 +139,14 @@ let current = null;
 export async function withSession(credentials, fn, opts = {}) {
   const { budget = true, sync = false } = opts;
 
-  // Reuse an already-open session (nested handler calls).
-  if (current) return fn(current.api);
+  // Reuse an already-open session. `hold()` keeps one open across a handler's
+  // several client calls; without it each call would open and close its own,
+  // and the second would fail with "No budget file is open".
+  if (current) {
+    const result = await fn(current.api);
+    if (sync) current.needsSync = true;
+    return result;
+  }
 
   const { server_url, session_token, sync_id, data_dir, encryption_password } = credentials;
   if (!server_url) throw new ActualError('No server URL configured. Run `fob-actual config profiles add <name>`.');
@@ -187,4 +201,30 @@ export async function withSession(credentials, fn, opts = {}) {
       // Shutdown failures must not mask the real error from `fn`.
     }
   }
+}
+
+/**
+ * Keep one engine session open for the duration of `fn`.
+ *
+ * Opening a session costs a network sync and a SQLite open, and the engine
+ * permits only one at a time — so a handler that makes several client calls must
+ * wrap them in `hold()`. Every `withSession` inside then reuses the open budget,
+ * and the session closes once (syncing if any nested call was a write).
+ *
+ * @template T
+ * @param {object} credentials
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
+export async function hold(credentials, fn) {
+  if (current) return fn();
+  return withSession(credentials, async () => {
+    const result = await fn();
+    // A nested write flags the session; sync before the outermost close.
+    if (current?.needsSync) {
+      await muffle(() => current.api.sync());
+      current.needsSync = false;
+    }
+    return result;
+  });
 }
