@@ -1,29 +1,20 @@
-# fob-actual
+# fob-actual — Actual Budget CLI and client library
 
-Actual Budget client **and** CLI in one package — import it in a worker, or drive it from the
-terminal.
+Work with your [Actual Budget](https://actualbudget.org/) from the terminal, from an AI agent,
+or from Node code. One package, two ways in:
 
-```bash
-fob-actual accounts list
-fob-actual budgets month 2026-09
-fob-actual transactions list --account "Checking 1234" --from 2026-08-01
-```
+- **The CLI** (`fob-actual`): accounts, transactions, the monthly budget, categories, payees,
+  rules, schedules and ActualQL queries. `--json` and CSV output for scripts, `--dry-run` on
+  every write, and agent-friendly.
+  → [finopsbricks.com/cli/fob-actual](https://finopsbricks.com/cli/fob-actual)
+- **The library** (`import { fobActual }`): the same operations as a Node client for scripts
+  and workers. The CLI calls the same code, so the two never drift.
+  → [Docs](https://finopsbricks.com/docs/actual)
 
-## How this wrapper differs
+You need your own Actual **sync server** (self-hosted, or a hosted one such as PikaPods).
 
-Actual has **no callable REST API**. Upstream is explicit: *"Actual does not expose HTTP endpoints
-that can be called."* The sync server stores opaque, optionally end-to-end-encrypted blobs and
-cannot read or modify a budget — all the domain logic lives in the official `@actual-app/api`
-package, which downloads the budget to a local SQLite copy, queries it, and syncs CRDT messages
-back.
-
-So where the other `fob-*` wrappers hold an HTTP transport, this one holds an **engine session**
-(`src/engine.js`), and two things follow:
-
-- **One budget at a time.** The engine is a process-wide singleton, so a profile pins one budget
-  and `--profile` switches between them.
-- **A local cache.** Each profile keeps a SQLite copy of its budget under
-  `~/.fob/fob-actual/data/<profile>/`. First run downloads; later runs sync the delta.
+Beta. Actual Budget is MIT-licensed open source; this project is not affiliated with or
+endorsed by it.
 
 ## Install
 
@@ -31,154 +22,142 @@ So where the other `fob-*` wrappers hold an HTTP transport, this one holds an **
 npm install -g @finopsbricks/fob-actual
 ```
 
-Requires **Node ≥ 22** (the engine enforces this).
+Requires Node.js 22 or later. If you use the [`fob` dispatcher](https://www.npmjs.com/package/@finopsbricks/fob-cli),
+`fob actual …` and `fob-actual …` are the same command.
 
-## Authentication
+## Connect your budget
 
-Actual authenticates with a **session token**. How you get one depends on the server:
-
-| Server login method | How to authenticate |
-|---|---|
-| Password | `fob-actual auth login --password <pw>` — mints a token directly |
-| OpenID / OAuth (Google, Authentik, …) | `fob-actual auth login` — guides you through copying the token from a logged-in browser |
-
-OpenID servers have **no headless login**: the flow is a browser redirect with PKCE, and upstream
-documents `ACTUAL_SESSION_TOKEN` without saying how to obtain one. `auth login` walks you through
-retrieving it from the browser's IndexedDB (`actual` → `asyncStorage` → `user-token`).
-
-Whether tokens expire is a **server** setting (`ACTUAL_TOKEN_EXPIRATION`), which defaults to
-`never`. On such a server a stored token keeps working, which is what makes worker use practical.
-
-### Getting started
+One command signs in, stores a profile and picks your budget:
 
 ```bash
-# 1. Store a token (prompts if you don't pass --session-token)
-fob-actual auth login --server-url https://budget.example.com
-
-# 2. See which budgets that token can reach
-fob-actual budgets list
-
-# 3. Bind a profile to one of them
-fob-actual config profiles add personal \
-  --server-url https://budget.example.com \
-  --session-token <token> \
-  --sync-id 1b4e28ba-2fa1-41d2-883f-0016d3cca427
-
-# 4. Confirm
-fob-actual auth status
+read -rs ACTUAL_PW        # your Actual server password; keeps it out of your shell history
+fob-actual auth login --profile household \
+  --server-url https://budget.example.com --password "$ACTUAL_PW"
+unset ACTUAL_PW
 ```
 
-## Configuration
-
-Profiles live in `~/.fob/fob-actual/config.yml` (mode `0600`). One profile = one budget.
-
-```yaml
-current_profile: personal
-profiles:
-  personal:
-    server_url: https://budget.example.com
-    session_token: <secret>
-    sync_id: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
-    budget_name: Household Budget          # cached from the server, for display
-  fob:
-    server_url: https://budget.example.com
-    session_token: <secret>
-    sync_id: 6fa459ea-ee8a-4ca4-894e-db77e160355e
-    budget_name: Business Budget
+```text
+Signed in with password.
+Stored session token for profile 'household'.
+Token valid — 1 budget(s) visible.
+Profile 'household' is bound to budget 'Household Budget'.
 ```
 
-**Precedence: `--profile` flag > `FOB_ACTUAL_*` env > current profile.**
+- **Several budgets on the server?** `auth login` prints a `config profiles add … --sync-id`
+  line for each. Run the one you want. The Sync ID is also in Actual under
+  **Settings → Show advanced settings**.
+- **Server signs in with OpenID** (Google, Authentik…)? Leave out `--password`: `auth login`
+  shows how to copy your session token from a browser that's signed in to Actual, and asks you
+  to paste it.
+- **End-to-end encrypted budget?** Add `--encryption-password` with `config profiles add`.
 
-| Variable | Purpose |
-|---|---|
-| `FOB_ACTUAL_SERVER_URL` | Sync server URL |
-| `FOB_ACTUAL_SESSION_TOKEN` | Session token |
-| `FOB_ACTUAL_SYNC_ID` | Budget sync id |
-| `FOB_ACTUAL_ENCRYPTION_PASSWORD` | Password for an end-to-end encrypted budget |
-| `FOB_ACTUAL_DATA_DIR` | Local budget cache location |
-| `FOB_ACTUAL_CONFIG_DIR` | Relocate the whole config dir (tests, containers, CI) |
+Then:
 
 ```bash
-fob-actual config profiles list        # all profiles, current marked with *
-fob-actual config profiles use fob     # switch budget
-fob-actual config profiles refresh --all
-fob-actual --profile fob accounts list # override for one command
+fob-actual accounts list
+fob-actual transactions list --account Checking --from 2026-09-01
 ```
 
-## Command grammar
+Full guide: [Connect your budget](https://finopsbricks.com/docs/actual/connect).
+Problems: [Troubleshooting](https://finopsbricks.com/docs/actual/troubleshooting).
 
-```
-fob-actual <resource> <action> [target] [options]
-```
+## Use the CLI
+
+Grammar: `fob-actual <resource> <action> [target] [options]`. Run `fob-actual <resource> --help`
+for its actions, or `fob-actual <resource> <action> --help` for flags.
 
 | Resource | Actions |
-|---|---|
+| --- | --- |
 | `config profiles` | `list`, `current`, `add`, `use`, `remove`, `refresh` |
 | `auth` | `login`, `status`, `logout` |
 | `budgets` | `list`, `show`, `sync`, `months`, `month`, `set-amount`, `carryover`, `hold`, `reset-hold` |
 | `accounts` | `list`, `show`, `balance`, `create`, `edit`, `close`, `reopen`, `delete` |
 | `transactions` | `list`, `add`, `import`, `edit`, `delete` |
-| `categories` | `list`, `show`, `create`, `edit`, `delete` |
-| `category-groups` | `list`, `show`, `create`, `edit`, `delete` |
+| `categories`, `category-groups`, `tags` | `list`, `show`, `create`, `edit`, `delete` |
 | `payees` | `list`, `show`, `create`, `edit`, `delete`, `merge` |
-| `rules` | `list`, `show`, `create`, `edit`, `delete` |
-| `schedules` | `list`, `show`, `create`, `edit`, `delete` |
-| `tags` | `list`, `show`, `create`, `edit`, `delete` |
-| `query` | `run` |
+| `rules`, `schedules` | `list`, `show`, `create`, `edit`, `delete` |
+| `query` | `run` (ActualQL) |
 | `server` | `info` |
 
-Every read command takes `--json`; every `list` also takes `--fields`, `--format table|csv|json`,
-`--output <file>`, and `--limit`. Data goes to stdout, diagnostics to stderr, so pipes stay clean:
-
 ```bash
-fob-actual accounts list --json | jq '.accounts[].name'
-fob-actual transactions list --account "Checking 1234" --format csv --output txns.csv
+fob-actual budgets month 2026-09
+fob-actual transactions add --account Checking --date 2026-09-20 --amount -42.50 --payee "Coffee Shop" --dry-run
+fob-actual transactions import --account Checking --file txns.json --dry-run   # Actual's dedupe and rules
+fob-actual payees list --format csv --output payees.csv
+fob-actual query run --table transactions --select date,amount,payee.name --filter '{"amount":{"$lt":0}}'
 ```
 
-### Money is in integer minor units
-
-The engine stores amounts as integers (`5176357` = `51,763.57`). The CLI formats them for display
-and parses decimals you type (`--amount 1250.00`), but `--json` shows the raw integers — that is
-the engine's own representation, kept faithful for scripting.
-
-## Writes are real, and shared
-
-Writes sync CRDT messages into a live budget that other people may share. Beyond the standard's
-baseline:
-
-- **`--dry-run`** on every write command shows what would change without writing.
-- **`--yes`** is required for every destructive action.
+- **Accounts accept a name or an ID.** An ambiguous name is refused rather than guessed.
+- **Every write has `--dry-run`**, and every destructive action needs `--yes`. Writes sync into
+  your live budget, which other people may share.
+- **`--json`** keeps money in Actual's integer minor units (`-4250` is −42.50). Tables format
+  it. On the command line you type decimals (`--amount -42.50`); import files use minor units.
+- **Every `list`** takes `--fields`, `--format table|csv|json`, `--output <file>` and
+  `--limit`. Data goes to stdout, notes and errors to stderr.
 
 ## Use as a library
-
-Workers import the same functions the CLI calls, so a terminal prototype ships unchanged:
 
 ```js
 import { fobActual } from '@finopsbricks/fob-actual';
 
 const actual = fobActual({
-  server_url: process.env.FOB_ACTUAL_SERVER_URL,
-  session_token: process.env.FOB_ACTUAL_SESSION_TOKEN,
-  sync_id: process.env.FOB_ACTUAL_SYNC_ID,
+  server_url: 'https://budget.example.com',
+  session_token: process.env.ACTUAL_TOKEN,
+  sync_id: '1b4e28ba-2fa1-41d2-883f-0016d3cca427',
   data_dir: '/var/cache/fob-actual',
 });
 
-const accounts = await actual.accounts.list();
-const balance = await actual.accounts.balance(accounts[0].id);
+// Several calls share one session inside hold(); without it each call reopens the budget.
+const balances = await actual.hold(async () => {
+  const out = {};
+  for (const a of await actual.accounts.list()) out[a.name] = await actual.accounts.balance(a.id);
+  return out;
+});
 ```
 
-Each call opens and closes an engine session, so a client is safe to hold across calls but is **not
-concurrent** — the engine allows one session per process. For several budgets, construct one client
-each and use them in sequence.
+The library takes credentials as arguments and never reads the environment or the config file.
+The Actual engine allows one budget session per process, so a client isn't safe for concurrent
+use: use clients one after another. See [Use the library](https://finopsbricks.com/docs/actual/integration/library).
 
-## Development
+## Credentials and configuration
+
+- **CLI:** profiles in `~/.fob/fob-actual/config.yml` (mode 0600), one per budget. Switch with
+  `config profiles use` or `--profile`. Override the folder with `FOB_ACTUAL_CONFIG_DIR`.
+- **Workers and CI:** `FOB_ACTUAL_SERVER_URL` plus `FOB_ACTUAL_SESSION_TOKEN` (both required),
+  and optionally `FOB_ACTUAL_SYNC_ID`, `FOB_ACTUAL_ENCRYPTION_PASSWORD` and
+  `FOB_ACTUAL_DATA_DIR`. See `.env.example`.
+- **Precedence:** `--profile` > `FOB_ACTUAL_*` environment > current profile.
+- **Local copy:** each profile keeps a copy of its budget (decrypted, if encrypted) under
+  `~/.fob/fob-actual/data/<profile>/`, owner-only (mode 0700).
+
+Credentials go only to your Actual server, never to FinOpsBricks.
+
+## Beta limits
+
+- Needs an Actual sync server; budgets that live only on one device aren't supported.
+- OpenID servers: the session token is copied from a browser. There's no browser login flow.
+- Bank sync isn't available from fob-actual.
+- One budget session per process; two commands running at once on the same profile aren't
+  guarded against each other.
+- `--limit` trims results after they're read; there's no server-side paging.
+- Tables show amounts with two decimals and no currency symbol.
+- `auth logout` only forgets the token locally. Passwords and tokens passed as flags land in
+  your shell history; use `read -rs` as above.
+- Built and tested against Actual 26.9 (`@actual-app/api` 26.9.0).
+
+Missing something? [Open an issue](https://github.com/finopsbricks/fob-actual/issues).
+
+## Develop
 
 ```bash
-npm test              # jest (ESM)
-npm run typecheck     # tsc over JSDoc types
-FOB_DEBUG=1 fob-actual ...   # full stack traces + raw engine chatter
+npm install
+npm test                      # jest (ESM)
+npm run typecheck             # tsc over JSDoc types
+FOB_DEBUG=1 fob-actual …      # full stack traces and the engine's own logging
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Apache-2.0
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
