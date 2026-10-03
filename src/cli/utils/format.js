@@ -1,7 +1,6 @@
 /**
  * Shared formatting helpers for CLI output.
- * Structured text readable by both humans and LLMs. Copied from the CLI standard's
- * reference set (engineering-standards/cli/output-formatting.md).
+ * Structured text readable by both humans and LLMs.
  *
  * Actual-specific note: the engine stores money as **integer minor units**
  * (`5176357` = 51,763.57), so `formatAmount` is the money helper here and

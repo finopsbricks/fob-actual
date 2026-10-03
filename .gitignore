@@ -2,3 +2,8 @@ node_modules/
 *.log
 .env
 junit.xml
+.claude/
+.DS_Store
+CLAUDE.md
+# Internal planning notes, kept locally
+docs/wip/

@@ -12,13 +12,13 @@ profiles:
   personal:
     server_url: https://budget.example.com
     session_token: <secret>
-    sync_id: 68e5ffc0-6a4d-4443-a747-0106a8fd6f72
-    budget_name: Alex Budget       # cached from the server, for display only
+    sync_id: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+    budget_name: Household Budget       # cached from the server, for display only
   fob:
     server_url: https://budget.example.com
     session_token: <secret>
-    sync_id: cb5d0af3-06c8-40ed-bdbc-071b6903ec08
-    budget_name: FOB Budget
+    sync_id: 6fa459ea-ee8a-4ca4-894e-db77e160355e
+    budget_name: Business Budget
 ```
 
 ```bash

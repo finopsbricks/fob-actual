@@ -6,9 +6,9 @@ const { buildBudgets } = await import('../src/resources/budgets.js');
 
 /** A downloaded budget is returned twice by the engine; a remote-only one once. */
 const RAW = [
-  { id: 'My-Finances-1', cloudFileId: 'f1', groupId: 'g1', name: 'Alex Budget', state: null },
-  { id: null, cloudFileId: 'f1', groupId: 'g1', name: 'Alex Budget', state: 'remote' },
-  { id: null, cloudFileId: 'f2', groupId: 'g2', name: 'FOB Budget', state: 'remote' },
+  { id: 'My-Finances-1', cloudFileId: 'f1', groupId: 'g1', name: 'Household Budget', state: null },
+  { id: null, cloudFileId: 'f1', groupId: 'g1', name: 'Household Budget', state: 'remote' },
+  { id: null, cloudFileId: 'f2', groupId: 'g2', name: 'Business Budget', state: 'remote' },
 ];
 
 const ctx = { server: (fn) => fn({ getBudgets: async () => RAW }) };
@@ -18,26 +18,26 @@ describe('budgets.list', () => {
   it('merges the local and remote entries for a downloaded budget', async () => {
     const list = await budgets.list();
     expect(list).toHaveLength(2);
-    expect(list.filter((b) => b.name === 'Alex Budget')).toHaveLength(1);
+    expect(list.filter((b) => b.name === 'Household Budget')).toHaveLength(1);
   });
 
   it("reports a downloaded budget as 'local' and keeps its local id", async () => {
-    const [alex] = await budgets.list();
-    expect(alex.state).toBe('local');
-    expect(alex.id).toBe('My-Finances-1');
+    const [household] = await budgets.list();
+    expect(household.state).toBe('local');
+    expect(household.id).toBe('My-Finances-1');
   });
 
   it("leaves a not-yet-downloaded budget 'remote'", async () => {
-    const fob = (await budgets.list()).find((b) => b.name === 'FOB Budget');
+    const fob = (await budgets.list()).find((b) => b.name === 'Business Budget');
     expect(fob.state).toBe('remote');
   });
 });
 
 describe('budgets.get', () => {
   it('resolves by sync id, file id, or name — all to the merged record', async () => {
-    for (const ref of ['g1', 'f1', 'Alex Budget']) {
+    for (const ref of ['g1', 'f1', 'Household Budget']) {
       const found = await budgets.get(ref);
-      expect(found.name).toBe('Alex Budget');
+      expect(found.name).toBe('Household Budget');
       expect(found.state).toBe('local');
     }
   });

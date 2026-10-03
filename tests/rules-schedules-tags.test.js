@@ -96,12 +96,12 @@ describe('query run', () => {
       offset: jest.fn().mockReturnThis(),
     };
     query.q.mockResolvedValue(builder);
-    query.run.mockResolvedValue({ data: [{ id: 'a1', name: 'HDFC' }] });
+    query.run.mockResolvedValue({ data: [{ id: 'a1', name: 'Checking' }] });
 
     await runQueryHandler({ table: 'accounts', select: 'id,name' });
     expect(query.q).toHaveBeenCalledWith('accounts');
     expect(builder.select).toHaveBeenCalledWith(['id', 'name']);
-    expect(out.stdout).toContain('HDFC');
+    expect(out.stdout).toContain('Checking');
   });
 
   it('requires a table or a full query', async () => {

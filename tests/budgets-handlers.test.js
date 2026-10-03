@@ -29,8 +29,8 @@ const { monthBudgetHandler } = await import('../src/cli/budgets/month.js');
 const { setAmountBudgetHandler } = await import('../src/cli/budgets/set-amount.js');
 
 const BUDGETS = [
-  { groupId: 'g1', cloudFileId: 'f1', name: 'Alex Budget', state: 'remote', encryptKeyId: null, usersWithAccess: [{ userName: 'a@b.c', displayName: 'A', owner: true }] },
-  { groupId: 'g2', cloudFileId: 'f2', name: 'FOB Budget', state: 'remote', encryptKeyId: 'k1', usersWithAccess: [] },
+  { groupId: 'g1', cloudFileId: 'f1', name: 'Household Budget', state: 'remote', encryptKeyId: null, usersWithAccess: [{ userName: 'a@b.c', displayName: 'A', owner: true }] },
+  { groupId: 'g2', cloudFileId: 'f2', name: 'Business Budget', state: 'remote', encryptKeyId: 'k1', usersWithAccess: [] },
 ];
 
 let out;
@@ -41,7 +41,7 @@ describe('listBudgetsHandler', () => {
   it('renders a table of budgets', async () => {
     budgets.list.mockResolvedValue(BUDGETS);
     await listBudgetsHandler({});
-    expect(out.stdout).toContain('Alex Budget');
+    expect(out.stdout).toContain('Household Budget');
     expect(out.stdout).toContain('g1');
   });
 
@@ -56,7 +56,7 @@ describe('listBudgetsHandler', () => {
   it('reports the encrypted flag', async () => {
     budgets.list.mockResolvedValue(BUDGETS);
     await listBudgetsHandler({ fields: 'name,encrypted' });
-    expect(out.stdout).toMatch(/FOB Budget\s+yes/);
+    expect(out.stdout).toMatch(/Business Budget\s+yes/);
   });
 
   it('trims with --limit and says so', async () => {
@@ -82,7 +82,7 @@ describe('showBudgetHandler', () => {
     budgets.get.mockResolvedValue(BUDGETS[0]);
     await showBudgetHandler({ id: 'g1' });
     expect(budgets.get).toHaveBeenCalledWith('g1');
-    expect(out.stdout).toContain('Alex Budget');
+    expect(out.stdout).toContain('Household Budget');
     expect(out.stdout).toContain('a@b.c');
   });
 

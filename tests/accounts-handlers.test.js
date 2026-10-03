@@ -33,7 +33,7 @@ const { balanceAccountHandler } = await import('../src/cli/accounts/balance.js')
 const { createAccountHandler, deleteAccountHandler, editAccountHandler } = await import('../src/cli/accounts/write.js');
 
 const ACCOUNTS = [
-  { id: 'a1', name: 'HDFC 1680', offbudget: false, closed: false },
+  { id: 'a1', name: 'Checking 1234', offbudget: false, closed: false },
   { id: 'a2', name: 'Old Card', offbudget: false, closed: true },
 ];
 
@@ -69,13 +69,13 @@ describe('listAccountsHandler', () => {
 
 describe('resolveAccount (via handlers)', () => {
   it('resolves an account by name, case-insensitively', async () => {
-    await showAccountHandler({ id: 'hdfc 1680' });
-    expect(out.stdout).toContain('HDFC 1680');
+    await showAccountHandler({ id: 'checking 1234' });
+    expect(out.stdout).toContain('Checking 1234');
   });
 
   it('resolves by id', async () => {
     await showAccountHandler({ id: 'a1' });
-    expect(out.stdout).toContain('HDFC 1680');
+    expect(out.stdout).toContain('Checking 1234');
   });
 
   it('exits 1 for an unknown account', async () => {

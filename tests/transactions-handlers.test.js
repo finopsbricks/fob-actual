@@ -33,7 +33,7 @@ let out;
 beforeEach(() => {
   jest.clearAllMocks();
   out = captureOutput();
-  accounts.list.mockResolvedValue([{ id: 'a1', name: 'HDFC 1680' }]);
+  accounts.list.mockResolvedValue([{ id: 'a1', name: 'Checking 1234' }]);
   transactions.list.mockResolvedValue(TXNS);
   payees.list.mockResolvedValue([{ id: 'p1', name: 'Cafe' }]);
   categories.listAll.mockResolvedValue([{ id: 'c1', name: 'Work food' }]);
@@ -54,7 +54,7 @@ describe('validateDateRange', () => {
 
 describe('listTransactionsHandler', () => {
   it('resolves payee and category ids to names for the table', async () => {
-    await listTransactionsHandler({ account: 'HDFC 1680', from: '2026-09-01', to: '2026-09-30' });
+    await listTransactionsHandler({ account: 'Checking 1234', from: '2026-09-01', to: '2026-09-30' });
     expect(out.stdout).toContain('Cafe');
     expect(out.stdout).toContain('Work food');
   });

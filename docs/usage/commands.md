@@ -15,7 +15,7 @@ Every read command takes `--json`. Every `list` also takes `--fields`, `--format
 
 ```bash
 fob-actual budgets list                       # files this token can see
-fob-actual budgets show "Alex Budget"         # by sync id, file id, or name
+fob-actual budgets show "Household Budget"         # by sync id, file id, or name
 fob-actual budgets sync                       # pull + push
 fob-actual budgets months                     # months covered
 fob-actual budgets month 2026-09              # the plan, by category group
@@ -35,11 +35,11 @@ Accounts accept a **name** anywhere an id is expected. An ambiguous name is refu
 ```bash
 fob-actual accounts list                      # open accounts + balances
 fob-actual accounts list --all                # include closed
-fob-actual accounts show "HDFC 1680"
-fob-actual accounts balance "HDFC 1680" --as-of 2026-06-30
+fob-actual accounts show "Checking 1234"
+fob-actual accounts balance "Checking 1234" --as-of 2026-06-30
 fob-actual accounts create --name "Savings" --balance 1000.00 [--offbudget]
 fob-actual accounts edit <id> --name "New name"
-fob-actual accounts close <id> --transfer-account "HDFC 1680"
+fob-actual accounts close <id> --transfer-account "Checking 1234"
 fob-actual accounts reopen <id>
 fob-actual accounts delete <id> --yes
 ```
@@ -47,12 +47,12 @@ fob-actual accounts delete <id> --yes
 ## transactions
 
 ```bash
-fob-actual transactions list --account "HDFC 1680"                  # last 30 days
-fob-actual transactions list --account "HDFC 1680" --from 2026-08-01 --to 2026-08-31
-fob-actual transactions add --account "HDFC 1680" --date 2026-09-05 --amount -42.50 \
+fob-actual transactions list --account "Checking 1234"                  # last 30 days
+fob-actual transactions list --account "Checking 1234" --from 2026-08-01 --to 2026-08-31
+fob-actual transactions add --account "Checking 1234" --date 2026-09-05 --amount -42.50 \
   --payee "Cafe" --notes "lunch"
-fob-actual transactions add --account "HDFC 1680" --file txns.json
-fob-actual transactions import --account "HDFC 1680" --file txns.json --dry-run
+fob-actual transactions add --account "Checking 1234" --file txns.json
+fob-actual transactions import --account "Checking 1234" --file txns.json --dry-run
 fob-actual transactions edit <id> --category <cat-id>
 fob-actual transactions delete <id> --yes
 ```
@@ -125,7 +125,7 @@ Data goes to stdout, diagnostics to stderr, so pipes stay clean:
 
 ```bash
 fob-actual accounts list --json | jq '.accounts[] | {name, balance}'
-fob-actual transactions list --account "HDFC 1680" --format csv --output txns.csv
+fob-actual transactions list --account "Checking 1234" --format csv --output txns.csv
 ```
 
 ## Related

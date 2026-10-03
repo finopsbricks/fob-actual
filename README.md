@@ -1,12 +1,12 @@
 # fob-actual
 
 Actual Budget client **and** CLI in one package — import it in a worker, or drive it from the
-terminal. Built to the FinOpsBricks [CLI standard](../../../alex/engineering-standards/cli/).
+terminal.
 
 ```bash
 fob-actual accounts list
 fob-actual budgets month 2026-09
-fob-actual transactions list --account "HDFC 1680" --from 2026-08-01
+fob-actual transactions list --account "Checking 1234" --from 2026-08-01
 ```
 
 ## How this wrapper differs
@@ -62,7 +62,7 @@ fob-actual budgets list
 fob-actual config profiles add personal \
   --server-url https://budget.example.com \
   --session-token <token> \
-  --sync-id 68e5ffc0-6a4d-4443-a747-0106a8fd6f72
+  --sync-id 1b4e28ba-2fa1-41d2-883f-0016d3cca427
 
 # 4. Confirm
 fob-actual auth status
@@ -78,13 +78,13 @@ profiles:
   personal:
     server_url: https://budget.example.com
     session_token: <secret>
-    sync_id: 68e5ffc0-6a4d-4443-a747-0106a8fd6f72
-    budget_name: Alex Budget          # cached from the server, for display
+    sync_id: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+    budget_name: Household Budget          # cached from the server, for display
   fob:
     server_url: https://budget.example.com
     session_token: <secret>
-    sync_id: cb5d0af3-06c8-40ed-bdbc-071b6903ec08
-    budget_name: FOB Budget
+    sync_id: 6fa459ea-ee8a-4ca4-894e-db77e160355e
+    budget_name: Business Budget
 ```
 
 **Precedence: `--profile` flag > `FOB_ACTUAL_*` env > current profile.**
@@ -132,7 +132,7 @@ Every read command takes `--json`; every `list` also takes `--fields`, `--format
 
 ```bash
 fob-actual accounts list --json | jq '.accounts[].name'
-fob-actual transactions list --account "HDFC 1680" --format csv --output txns.csv
+fob-actual transactions list --account "Checking 1234" --format csv --output txns.csv
 ```
 
 ### Money is in integer minor units
