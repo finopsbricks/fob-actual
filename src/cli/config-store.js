@@ -26,6 +26,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
 
+import { CONNECT_DOCS_URL } from '../links.js';
+
 const CONFIG_DIR = process.env.FOB_ACTUAL_CONFIG_DIR || join(homedir(), '.fob', 'fob-actual');
 const CONFIG_PATH = join(CONFIG_DIR, 'config.yml');
 
@@ -226,7 +228,9 @@ export function resolveCredentials() {
   }
 
   throw new Error(
-    'No Actual profile selected. Run `fob-actual config profiles add <name>` (or set FOB_ACTUAL_* env).',
+    'No Actual profile selected. Run `fob-actual auth login --server-url <url>` to connect, ' +
+      'or `fob-actual config profiles add <name>` (or set FOB_ACTUAL_* env). ' +
+      `See ${CONNECT_DOCS_URL}`,
   );
 }
 

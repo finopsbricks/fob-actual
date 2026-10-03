@@ -1,7 +1,8 @@
 {
   "name": "@finopsbricks/fob-actual",
   "version": "0.1.0",
-  "description": "Actual Budget client + fob-actual CLI (2-in-1). Import the client in workers, or use the CLI.",
+  "description": "Actual Budget CLI and Node.js client: accounts, transactions, budgets, rules and ActualQL from the terminal, an AI agent or your code.",
+  "homepage": "https://finopsbricks.com/cli/fob-actual",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -46,7 +47,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@actual-app/api": "^26.8.1",
+    "@actual-app/api": "26.9.0",
     "@inquirer/prompts": "^7.10.1",
     "js-yaml": "^4.1.0",
     "yargs": "^17.7.2"

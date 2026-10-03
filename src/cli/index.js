@@ -9,6 +9,7 @@
  * command.
  */
 
+import { readFileSync } from 'node:fs';
 import yargs from 'yargs';
 
 import { setProfileOverride } from './config-store.js';
@@ -25,6 +26,11 @@ import { buildSchedulesSubcommands } from './schedules/index.js';
 import { buildTagsSubcommands } from './tags/index.js';
 import { buildQuerySubcommands } from './query/index.js';
 import { buildServerSubcommands } from './server/index.js';
+import { CONNECT_DOCS_URL, DOCS_URL, LANDING_URL } from '../links.js';
+
+// Read our own package.json: yargs' bare `.version()` looks for the package.json
+// above its own node_modules, which isn't ours once fob-actual is npm-installed.
+const { version } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 
 export function run(argv) {
   return yargs(argv)
@@ -54,7 +60,7 @@ export function run(argv) {
     .strict()
     .help()
     .alias('h', 'help')
-    .version()
+    .version(version)
     .alias('v', 'version')
     // Wrap to the terminal width so long descriptions hang-indent at the
     // description column. Never .wrap(null) — that defers to the terminal, which
@@ -64,5 +70,6 @@ export function run(argv) {
     // heading; each command's own options stay under "Options:", shown first
     // via localOptions() in the command builders.
     .group(['profile', 'help', 'version'], 'Global Options:')
+    .epilogue(`New here? Connect your server: ${CONNECT_DOCS_URL}\nDocs: ${DOCS_URL}\nAbout: ${LANDING_URL}`)
     .parse();
 }

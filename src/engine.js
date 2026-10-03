@@ -25,7 +25,9 @@
  *    only sync the delta.
  */
 
-import { mkdirSync } from 'node:fs';
+import { chmodSync, mkdirSync } from 'node:fs';
+
+import { TROUBLESHOOTING_DOCS_URL } from './links.js';
 
 /**
  * Error thrown by the engine layer, carrying the machine-readable code the
@@ -56,26 +58,30 @@ export function toActualError(err) {
 
   if (code === 'token-expired' || /invalid or expired session token/i.test(message)) {
     return new ActualError(
-      'Session token is invalid or expired. Run `fob-actual auth login` to store a fresh one.',
+      'Session token is invalid or expired. Run `fob-actual auth login` to store a fresh one. ' +
+        `See ${TROUBLESHOOTING_DOCS_URL}#session-token-is-invalid-or-expired`,
       { code: 'token-expired', cause: err },
     );
   }
   if (code === 'network-failure' || /server offline or unreachable/i.test(message)) {
     return new ActualError(
-      'Could not reach the Actual server. Check the server URL and your connection.',
+      'Could not reach the Actual server. Check the server URL and your connection. ' +
+        `See ${TROUBLESHOOTING_DOCS_URL}#could-not-reach-the-actual-server`,
       { code: 'network-failure', cause: err },
     );
   }
   if (/file-not-found|budget.*not found/i.test(message) || code === 'file-not-found') {
     return new ActualError(
-      'Budget not found on the server. Check the sync id with `fob-actual budgets list`.',
+      'Budget not found on the server. Check the sync id with `fob-actual budgets list`. ' +
+        `See ${TROUBLESHOOTING_DOCS_URL}#budget-not-found`,
       { code: 'file-not-found', cause: err },
     );
   }
   if (code === 'needs-key' || /needs-key|decrypt/i.test(message)) {
     return new ActualError(
       'This budget is end-to-end encrypted. Set the encryption password on the profile ' +
-        '(`fob-actual config profiles add <name> --encryption-password ...`).',
+        '(`fob-actual config profiles add <name> --encryption-password ...`). ' +
+        `See ${TROUBLESHOOTING_DOCS_URL}#encrypted-budgets`,
       { code: 'needs-key', cause: err },
     );
   }
@@ -102,15 +108,34 @@ export function toActualError(err) {
 async function muffle(fn) {
   if (process.env.FOB_DEBUG) return fn();
 
+  // The engine also prints its own errors (a raw `TypeError: fetch failed` stack
+  // on a bad server URL) before rejecting. Hold its stderr output: on failure
+  // the caller's friendly ActualError replaces it; on success it is replayed.
   const originalLog = console.log;
   const originalInfo = console.info;
-  console.log = (...args) => console.error(...args);
-  console.info = (...args) => console.error(...args);
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  /** @type {unknown[][]} */
+  const held = [];
+  const hold = (...args) => {
+    held.push(args);
+  };
+  console.log = hold;
+  console.info = hold;
+  console.error = hold;
+  console.warn = hold;
+  let failed = false;
   try {
     return await fn();
+  } catch (err) {
+    failed = true;
+    throw err;
   } finally {
     console.log = originalLog;
     console.info = originalInfo;
+    console.error = originalError;
+    console.warn = originalWarn;
+    if (!failed) for (const args of held) console.error(...args);
   }
 }
 
@@ -140,8 +165,7 @@ export async function withSession(credentials, fn, opts = {}) {
   const { budget = true, sync = false } = opts;
 
   // Reuse an already-open session. `hold()` keeps one open across a handler's
-  // several client calls; without it each call would open and close its own,
-  // and the second would fail with "No budget file is open".
+  // several client calls; without it each call opens and closes its own.
   if (current) {
     const result = await fn(current.api);
     if (sync) current.needsSync = true;
@@ -159,10 +183,21 @@ export async function withSession(credentials, fn, opts = {}) {
   }
 
   const api = await import('@actual-app/api');
-  mkdirSync(data_dir, { recursive: true });
+  // The data dir holds a decrypted copy of the budget: owner-only, like config.yml.
+  mkdirSync(data_dir, { recursive: true, mode: 0o700 });
+  try {
+    chmodSync(data_dir, 0o700);
+  } catch {
+    /* non-POSIX filesystem */
+  }
 
   try {
-    await muffle(() => api.init({ dataDir: data_dir, serverURL: server_url, sessionToken: session_token }));
+    // verbose: false stops the engine's progress logging ("Syncing since…",
+    // "[Breadcrumb]…") at the source, including during the handler body, where
+    // muffle() doesn't reach. FOB_DEBUG=1 turns it back on.
+    await muffle(() =>
+      api.init({ dataDir: data_dir, serverURL: server_url, sessionToken: session_token, verbose: Boolean(process.env.FOB_DEBUG) }),
+    );
   } catch (err) {
     throw toActualError(err);
   }
@@ -207,8 +242,8 @@ export async function withSession(credentials, fn, opts = {}) {
  * Keep one engine session open for the duration of `fn`.
  *
  * Opening a session costs a network sync and a SQLite open, and the engine
- * permits only one at a time — so a handler that makes several client calls must
- * wrap them in `hold()`. Every `withSession` inside then reuses the open budget,
+ * permits only one at a time — so a handler that makes several client calls
+ * should wrap them in `hold()` to share one session. Every `withSession` inside then reuses the open budget,
  * and the session closes once (syncing if any nested call was a write).
  *
  * @template T

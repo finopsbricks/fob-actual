@@ -17,15 +17,16 @@
  * session**: Actual exposes no callable REST API, so `@actual-app/api` downloads
  * the budget to a local SQLite copy, answers queries from it, and syncs CRDT
  * messages back. Each call opens and closes a session (see src/engine.js), which
- * costs a sync and a SQLite open — so **wrap several calls in `hold()`**:
+ * costs a sync and a SQLite open — so to make several calls faster, **wrap them
+ * in `hold()`** and they share one session:
  *
  *   await actual.hold(async () => {
  *     const accounts = await actual.accounts.list();
  *     return actual.accounts.balance(accounts[0].id);
  *   });
  *
- * Without it the second call fails ("No budget file is open"), because the first
- * closed the budget on its way out. The engine permits one session per process,
+ * Calls also work one after another without `hold()`; each just reopens the
+ * budget. The engine permits one session per process,
  * so a client is not concurrent; multi-budget workers construct one client per
  * budget — `fobActual(budgetACreds)`, `fobActual(budgetBCreds)` — used in sequence.
  *
@@ -41,6 +42,7 @@
  * @typedef {import('./resources/query.js').QueryApi} QueryApi
  */
 
+import { toActualError } from './engine.js';
 import { createContext } from './resources/_base.js';
 import { buildBudgets } from './resources/budgets.js';
 import { buildAccounts } from './resources/accounts.js';
@@ -99,7 +101,14 @@ export function fobActual(credentials) {
      */
     hold: (fn) => ctx.hold(fn),
     /** The sync server's version string. */
-    serverVersion: () => ctx.server((api) => api.getServerVersion()),
+    // The engine answers `{ version }` or `{ error }`; unwrap to the string the
+    // type promises, and turn an error into an ActualError.
+    serverVersion: () =>
+      ctx.server(async (api) => {
+        const res = await api.getServerVersion();
+        if (res?.error) throw toActualError({ message: res.error, errorCode: res.error });
+        return res?.version ?? res;
+      }),
   };
 }
 
